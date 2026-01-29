@@ -127,17 +127,21 @@ class WitnessResponseHandler(BaseHandler):
         except Exception as e:
             LOGGER.warning(f"Could not update pending record state: {e}")
 
-        # For an attested resource, we append the proof
-        attested_resource["proof"].append(context.message.witness_proof)
+        # For an attested resource, append the proof only when attested
+        if context.message.witness_proof is not None:
+            attested_resource["proof"].append(context.message.witness_proof)
         self._logger.info(attested_resource)
         await controller.upload_resource(
             attested_resource, context.message.state, request_id
         )
 
-        # Remove from pending records after successful completion
-        try:
-            await PENDING_RECORDS.remove_pending_record(context.profile, request_id)
-        except Exception as e:
-            LOGGER.warning(f"Could not remove pending record: {e}")
+        # Remove from pending records only when operation is complete (attested).
+        # When state is PENDING, the witness is holding for manual approval - keep
+        # the record so the controller can see it via GET /requests.
+        if context.message.state != WitnessingState.PENDING.value:
+            try:
+                await PENDING_RECORDS.remove_pending_record(context.profile, request_id)
+            except Exception as e:
+                LOGGER.warning(f"Could not remove pending record: {e}")
 
         return {"status": "ok"}

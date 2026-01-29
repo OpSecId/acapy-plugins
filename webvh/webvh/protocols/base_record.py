@@ -71,6 +71,18 @@ class BasePendingRecord:
                         results.append(entry.value_json)
                 except Exception:
                     pass
+        if not results and not record_ids:
+            # Fallback: index may be empty (e.g., migration), try fetch_all
+            try:
+                async with profile.session() as session:
+                    entries = await session.handle.fetch_all(self.RECORD_TYPE)
+                results = [
+                    e.value_json
+                    for e in (list(entries) if entries else [])
+                    if isinstance(e.value_json, dict)
+                ]
+            except Exception:
+                pass
         return results
 
     async def get_pending_record(self, profile: Profile, record_id: str) -> set:
@@ -118,12 +130,21 @@ class BasePendingRecord:
             "role": role_value,
         }
         async with profile.session() as session:
-            await session.handle.insert(
-                self.RECORD_TYPE,
-                record_id,
-                value_json=pending_record,
-                tags={"connection_id": connection_id or "", "role": role_value},
-            )
+            try:
+                await session.handle.insert(
+                    self.RECORD_TYPE,
+                    record_id,
+                    value_json=pending_record,
+                    tags={"connection_id": connection_id or "", "role": role_value},
+                )
+            except Exception:
+                # Record may already exist (e.g., witness saved first in shared storage)
+                await session.handle.replace(
+                    self.RECORD_TYPE,
+                    record_id,
+                    value_json=pending_record,
+                    tags={"connection_id": connection_id or "", "role": role_value},
+                )
         record_ids = await self._get_index(profile)
         if record_id not in record_ids:
             record_ids.append(record_id)
