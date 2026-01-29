@@ -108,7 +108,7 @@ class WitnessResponseHandler(BaseHandler):
             if record:
                 record["state"] = context.message.state
                 async with context.profile.session() as session:
-                    await session.handle.insert(
+                    await session.handle.replace(
                         PENDING_RECORDS.RECORD_TYPE,
                         request_id,
                         value_json=record,

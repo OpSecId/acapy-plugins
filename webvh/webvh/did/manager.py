@@ -188,7 +188,7 @@ class ControllerManager:
                 if record:
                     record["state"] = WitnessingState.PENDING.value
                     async with self.profile.session() as session:
-                        await session.handle.insert(
+                        await session.handle.replace(
                             self.pending_log_entries.RECORD_TYPE,
                             request_id,
                             value_json=record,

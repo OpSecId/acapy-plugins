@@ -641,7 +641,7 @@ class DIDWebVHRegistry(BaseAnonCredsResolver, BaseAnonCredsRegistrar):
                             from ..protocols.states import WitnessingState
                             record["state"] = WitnessingState.PENDING.value
                             async with profile.session() as session:
-                                await session.handle.insert(
+                                await session.handle.replace(
                                     PendingAttestedResourceRecord().RECORD_TYPE,
                                     request_id,
                                     value_json=record,
