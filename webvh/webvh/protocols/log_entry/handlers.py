@@ -38,7 +38,11 @@ class WitnessRequestHandler(BaseHandler):
         witness = WitnessManager(context.profile)
 
         config = await get_plugin_config(context.profile)
-        connection_id = context.connection_record.connection_id
+        connection_id = (
+            context.connection_record.connection_id
+            if context.connection_record
+            else ""
+        )
         if config.get("auto_attest", False):
             witness_signature = await witness.sign_log_version(log_entry.get("versionId"))
             await responder.send(
@@ -58,10 +62,15 @@ class WitnessRequestHandler(BaseHandler):
             )
             # Save the document to the wallet for manual witness
             scid = log_entry.get("state").get("id").split(":")[2]
-            # Determine role: self-witnessing if no connection_id, otherwise witness
+            # Witness handler: we are always the witness when receiving a request
             role = "self-witness" if not connection_id else "witness"
             await PENDING_RECORDS.save_pending_record(
-                context.profile, scid, log_entry, request_id, connection_id, role=role
+                context.profile,
+                scid,
+                log_entry,
+                request_id,
+                connection_id or "",
+                role=role,
             )
 
             await responder.send(
@@ -122,7 +131,7 @@ class WitnessResponseHandler(BaseHandler):
 
         # Remove from pending records after successful completion
         try:
-            await PENDING_RECORDS.remove_pending_record_id(context.profile, request_id)
+            await PENDING_RECORDS.remove_pending_record(context.profile, request_id)
         except Exception as e:
             LOGGER.warning(f"Could not remove pending record: {e}")
 

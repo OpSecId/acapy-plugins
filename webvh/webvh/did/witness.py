@@ -88,7 +88,7 @@ class WitnessManager:
         self,
         scid: str,
         log_entry: dict,
-        witness_request_id: str,
+        request_id: str,
     ) -> Optional[dict]:
         """Witness the document with the given parameters."""
         config = await get_plugin_config(self.profile)
@@ -101,7 +101,7 @@ class WitnessManager:
 
             # Self-witnessing: no connection_id, role is self-witness
             await record.save_pending_record(
-                self.profile, scid, log_entry, witness_request_id, connection_id="", role="self-witness"
+                self.profile, scid, log_entry, request_id, connection_id="", role="self-witness"
             )
 
         # Need proof from witness agent
@@ -114,7 +114,7 @@ class WitnessManager:
 
             await responder.send(
                 message=LogEntryWitnessRequest(
-                    document=log_entry, request_id=witness_request_id
+                    document=log_entry, request_id=request_id
                 ),
                 connection_id=witness_connection.connection_id,
             )
@@ -123,7 +123,7 @@ class WitnessManager:
         self,
         scid: str,
         attested_resource: dict,
-        witness_request_id: str,
+        request_id: str,
     ) -> Optional[dict]:
         """Witness the document with the given parameters."""
         config = await get_plugin_config(self.profile)
@@ -143,7 +143,7 @@ class WitnessManager:
                 self.profile,
                 scid,
                 attested_resource,
-                witness_request_id,
+                request_id,
                 connection_id="",
                 role="self-witness",
             )
@@ -158,7 +158,7 @@ class WitnessManager:
 
             await responder.send(
                 message=AttestedResourceWitnessRequest(
-                    document=attested_resource, request_id=witness_request_id
+                    document=attested_resource, request_id=request_id
                 ),
                 connection_id=witness_connection.connection_id,
             )

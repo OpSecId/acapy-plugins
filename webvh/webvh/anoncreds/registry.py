@@ -603,9 +603,9 @@ class DIDWebVHRegistry(BaseAnonCredsResolver, BaseAnonCredsRegistrar):
             # Request witness approval
             witness = WitnessManager(profile)
             controller = ControllerManager(profile)
-            witness_request_id = str(uuid.uuid4())
+            request_id = str(uuid.uuid4())
             endorsed_resource = await witness.witness_attested_resource(
-                scid, secured_resource, witness_request_id
+                scid, secured_resource, request_id
             )
 
             if not isinstance(endorsed_resource, dict):
@@ -622,20 +622,20 @@ class DIDWebVHRegistry(BaseAnonCredsResolver, BaseAnonCredsRegistrar):
 
                 # Save full pending record
                 await PendingAttestedResourceRecord().save_pending_record(
-                    profile, scid, secured_resource, witness_request_id, connection_id, role=role
+                    profile, scid, secured_resource, request_id, connection_id, role=role
                 )
 
                 try:
-                    LOGGER.info(witness_request_id)
+                    LOGGER.info(request_id)
                     await asyncio.wait_for(
-                        controller._wait_for_resource(witness_request_id),
+                        controller._wait_for_resource(request_id),
                         WITNESS_WAIT_TIMEOUT_SECONDS,
                     )
                 except asyncio.TimeoutError:
                     # Update record state to timeout
                     try:
                         record, _ = await PendingAttestedResourceRecord().get_pending_record(
-                            profile, witness_request_id
+                            profile, request_id
                         )
                         if record:
                             from ..protocols.states import WitnessingState
@@ -643,7 +643,7 @@ class DIDWebVHRegistry(BaseAnonCredsResolver, BaseAnonCredsRegistrar):
                             async with profile.session() as session:
                                 await session.handle.insert(
                                     PendingAttestedResourceRecord().RECORD_TYPE,
-                                    witness_request_id,
+                                    request_id,
                                     value_json=record,
                                     tags={"connection_id": connection_id},
                                 )

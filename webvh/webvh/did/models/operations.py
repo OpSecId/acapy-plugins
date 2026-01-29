@@ -196,7 +196,7 @@ class WebvhCreateSchema(OpenAPISchema):
         witness_threshold = fields.Int(
             required=False,
             metadata={
-                "description": "The witness treshold.",
+                "description": "The witness threshold.",
                 "example": 1,
             },
         )

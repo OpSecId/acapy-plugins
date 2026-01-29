@@ -7,6 +7,10 @@ authors = []
 [tool.poetry.dependencies]
 python = "^3.13"
 
+# Override yanked transitive dependencies from acapy-agent
+configargparse = ">=1.7.1"
+aiohttp-cors = ">=0.8.1"
+
 # Define ACA-Py as an optional/extra dependency so it can be
 # explicitly installed with the plugin if desired.
 acapy-agent = { git = "https://github.com/openwallet-foundation/acapy.git", branch = "main", optional = true }

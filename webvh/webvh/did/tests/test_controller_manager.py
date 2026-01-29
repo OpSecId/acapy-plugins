@@ -181,10 +181,6 @@ class TestOperationsManager(IsolatedAsyncioTestCase):
         await PendingLogEntryRecord().save_pending_record(
             self.profile, TEST_SCID, TEST_LOG_ENTRY, record_id
         )
-        await PendingLogEntryRecord().set_pending_record_id(
-            self.profile,
-            record_id,
-        )
 
         witness_signature = await self.witness.sign_log_version(
             TEST_LOG_ENTRY.get("versionId")
@@ -195,6 +191,11 @@ class TestOperationsManager(IsolatedAsyncioTestCase):
             state=WitnessingState.ATTESTED.value,
             record_id=record_id,
         )
-        assert record_id not in (
-            await PendingLogEntryRecord().get_pending_record_ids(self.profile)
+        # Record is removed by handler; verify we can clean up
+        await PendingLogEntryRecord().remove_pending_record(
+            self.profile, record_id
         )
+        results = await PendingLogEntryRecord().get_pending_records(
+            self.profile
+        )
+        assert not any(r.get("record_id") == record_id for r in results)

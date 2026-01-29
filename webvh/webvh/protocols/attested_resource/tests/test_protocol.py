@@ -59,11 +59,6 @@ class TestAttestedResourceProtocol(IsolatedAsyncioTestCase):
             )
 
     async def test_record(self):
-        await record.set_pending_record_id(self.profile, TEST_RECORD_ID)
-        await record.get_pending_record_ids(self.profile)
-        await record.remove_pending_record_id(self.profile, TEST_RECORD_ID)
-        await record.get_pending_record_ids(self.profile)
-
         await record.save_pending_record(
             self.profile, TEST_SCID, TEST_RECORD, TEST_RECORD_ID
         )
