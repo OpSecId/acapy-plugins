@@ -1,12 +1,14 @@
 """Module for handling pending webvh dids."""
 
 import logging
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 from acapy_agent.core.profile import Profile
 from .states import WitnessingState
 
 LOGGER = logging.getLogger(__name__)
+
+INDEX_RECORD_ID = "_index"
 
 
 class BasePendingRecord:
@@ -23,16 +25,53 @@ class BasePendingRecord:
             cls.instance = super().__new__(cls)
         return cls.instance
 
-    async def get_pending_records(self, profile: Profile) -> list:
-        """Get all pending records."""
+    async def _get_index(self, profile: Profile) -> List[str]:
+        """Get the list of pending record IDs from the index."""
         async with profile.session() as session:
-            entries = await session.handle.fetch_all(self.RECORD_TYPE)
-        # Filter out legacy index record if present (value_json was list of ids)
-        return [
-            entry.value_json
-            for entry in list(entries)
-            if isinstance(entry.value_json, dict)
-        ]
+            try:
+                entry = await session.handle.fetch(
+                    self.RECORD_TYPE, INDEX_RECORD_ID
+                )
+                ids = entry.value_json if entry else []
+                return ids if isinstance(ids, list) else []
+            except Exception:
+                return []
+
+    async def _save_index(self, profile: Profile, record_ids: List[str]) -> None:
+        """Save the index of pending record IDs."""
+        async with profile.session() as session:
+            try:
+                await session.handle.replace(
+                    self.RECORD_TYPE,
+                    INDEX_RECORD_ID,
+                    value_json=record_ids,
+                    tags={},
+                )
+            except Exception:
+                await session.handle.insert(
+                    self.RECORD_TYPE,
+                    INDEX_RECORD_ID,
+                    value_json=record_ids,
+                    tags={},
+                )
+
+    async def get_pending_records(self, profile: Profile) -> list:
+        """Get all pending records by fetching each from the index."""
+        record_ids = await self._get_index(profile)
+        results = []
+        async with profile.session() as session:
+            for record_id in record_ids:
+                if record_id == INDEX_RECORD_ID:
+                    continue
+                try:
+                    entry = await session.handle.fetch(
+                        self.RECORD_TYPE, record_id
+                    )
+                    if entry and isinstance(entry.value_json, dict):
+                        results.append(entry.value_json)
+                except Exception:
+                    pass
+        return results
 
     async def get_pending_record(self, profile: Profile, record_id: str) -> set:
         """Get a pending record given a record_id."""
@@ -44,7 +83,10 @@ class BasePendingRecord:
         """Remove a pending record given a record_id."""
         async with profile.session() as session:
             await session.handle.remove(self.RECORD_TYPE, record_id)
-
+        record_ids = await self._get_index(profile)
+        if record_id in record_ids:
+            record_ids.remove(record_id)
+            await self._save_index(profile, record_ids)
         return {"status": "success", "message": f"Removed {self.RECORD_TYPE}."}
 
     async def save_pending_record(
@@ -82,6 +124,10 @@ class BasePendingRecord:
                 value_json=pending_record,
                 tags={"connection_id": connection_id or "", "role": role_value},
             )
+        record_ids = await self._get_index(profile)
+        if record_id not in record_ids:
+            record_ids.append(record_id)
+            await self._save_index(profile, record_ids)
         await self.emit_event(profile, pending_record)
 
     async def emit_event(self, profile: Profile, payload: Optional[Any] = None):
