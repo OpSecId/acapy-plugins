@@ -224,9 +224,9 @@ async def register(app: web.Application):
         [
             web.post("/did/webvh/configuration", configure),
             web.get("/did/webvh/configuration", get_config, allow_head=False),
-            web.post("/did/webvh/create", create),
-            web.post("/did/webvh/update", update),
-            web.post("/did/webvh/deactivate", deactivate),
+            web.post("/did/webvh/operations/create", create),
+            web.post("/did/webvh/operations/update", update),
+            web.post("/did/webvh/operations/deactivate", deactivate),
             # web.post(
             #     "/did/webvh/verification-methods",
             #     add_verification_method_request,

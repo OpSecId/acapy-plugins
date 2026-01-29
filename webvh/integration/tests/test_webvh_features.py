@@ -30,7 +30,7 @@ async def test_prerotation():
 
     identifier = str(uuid.uuid4())
     create_response = await witness.post(
-        "/did/webvh/create",
+        "/did/webvh/operations/create",
         json={
             "options": {
                 "namespace": TEST_NAMESPACE,
@@ -48,7 +48,7 @@ async def test_prerotation():
     # did_document["alsoKnownAs"] = ["https://example.com/updated"]
 
     # await witness.post(
-    #     f"/did/webvh/update?scid={scid}",
+    #     f"/did/webvh/operations/update?scid={scid}",
     #     json={"did_document": did_document, "options": {}},
     # )
 
@@ -78,7 +78,7 @@ async def test_portability():
 
     identifier = str(uuid.uuid4())
     create_response = await witness.post(
-        "/did/webvh/create",
+        "/did/webvh/operations/create",
         json={
             "options": {
                 "namespace": TEST_NAMESPACE,
@@ -113,7 +113,7 @@ async def test_watcher():
 
     identifier = str(uuid.uuid4())
     create_response = await witness.post(
-        "/did/webvh/create",
+        "/did/webvh/operations/create",
         json={
             "options": {
                 "namespace": TEST_NAMESPACE,
@@ -148,7 +148,7 @@ async def test_whois():
 
     identifier = str(uuid.uuid4())
     create_response = await witness.post(
-        "/did/webvh/create",
+        "/did/webvh/operations/create",
         json={
             "options": {
                 "namespace": TEST_NAMESPACE,
@@ -229,7 +229,7 @@ async def test_witness():
 
     identifier = str(uuid.uuid4())
     create_response = await witness.post(
-        "/did/webvh/create",
+        "/did/webvh/operations/create",
         json={
             "options": {
                 "namespace": TEST_NAMESPACE,

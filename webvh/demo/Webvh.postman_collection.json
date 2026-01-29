@@ -154,7 +154,7 @@
 					}
 				},
 				"url": {
-					"raw": "{{CONTROLLER_AGENT_URL}}/did/webvh/create",
+					"raw": "{{CONTROLLER_AGENT_URL}}/did/webvh/operations/create",
 					"host": [
 						"{{CONTROLLER_AGENT_URL}}"
 					],

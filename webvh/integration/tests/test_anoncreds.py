@@ -32,7 +32,7 @@ async def create_did(agent):
     )
     identifier = str(uuid.uuid4())
     response = await agent.post(
-        "/did/webvh/create",
+        "/did/webvh/operations/create",
         json={"options": {"namespace": TEST_NAMESPACE, "identifier": identifier}},
     )
     return response["state"]["id"]

@@ -100,7 +100,7 @@ class WitnessResponseHandler(BaseHandler):
         controller = ControllerManager(context.profile)
         request_id = context.message.request_id
 
-        # Update record state to completed/attested
+        # Update record state (attested, rejected, etc.)
         try:
             record, connection_id = await PENDING_RECORDS.get_pending_record(
                 context.profile, request_id
@@ -117,9 +117,32 @@ class WitnessResponseHandler(BaseHandler):
         except Exception as e:
             LOGGER.warning(f"Could not update pending record state: {e}")
 
+        # Rejected: controller record updated to rejected, then remove
+        if context.message.state == WitnessingState.REJECTED.value:
+            try:
+                await PENDING_RECORDS.remove_pending_record(context.profile, request_id)
+            except Exception as e:
+                LOGGER.warning(f"Could not remove pending record: {e}")
+            return {"status": "ok"}
+
+        # PENDING: witness is holding for manual approval - fire event, keep record visible
+        if context.message.state == WitnessingState.PENDING.value:
+            witness_signature = {
+                "versionId": log_entry.get("versionId"),
+                "proof": [context.message.witness_proof] if context.message.witness_proof else [],
+            }
+            await controller.finish_did_operation(
+                log_entry=log_entry,
+                witness_signature=witness_signature,
+                state=context.message.state,
+                record_id=request_id,
+            )
+            return {"status": "ok"}
+
+        # Attested: finish operation and remove
         witness_signature = {
             "versionId": log_entry.get("versionId"),
-            "proof": [context.message.witness_proof],
+            "proof": [context.message.witness_proof] if context.message.witness_proof else [],
         }
 
         await controller.finish_did_operation(
@@ -129,13 +152,9 @@ class WitnessResponseHandler(BaseHandler):
             record_id=request_id,
         )
 
-        # Remove from pending records only when operation is complete (attested).
-        # When state is PENDING, the witness is holding for manual approval - keep
-        # the record so the controller can see it via GET /requests.
-        if context.message.state != WitnessingState.PENDING.value:
-            try:
-                await PENDING_RECORDS.remove_pending_record(context.profile, request_id)
-            except Exception as e:
-                LOGGER.warning(f"Could not remove pending record: {e}")
+        try:
+            await PENDING_RECORDS.remove_pending_record(context.profile, request_id)
+        except Exception as e:
+            LOGGER.warning(f"Could not remove pending record: {e}")
 
         return {"status": "ok"}

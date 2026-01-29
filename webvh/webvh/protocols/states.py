@@ -12,3 +12,4 @@ class WitnessingState(Enum):
     POSTED = "posted"
     FINISHED = "finished"
     TIMEOUT = "timeout"
+    REJECTED = "rejected"

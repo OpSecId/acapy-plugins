@@ -30,7 +30,7 @@ async def test_create_operation():
 
     identifier = str(uuid.uuid4())
     create_response = await witness.post(
-        "/did/webvh/create",
+        "/did/webvh/operations/create",
         json={
             "options": {
                 "namespace": TEST_NAMESPACE,
@@ -67,7 +67,7 @@ async def test_update_operation():
 
     identifier = str(uuid.uuid4())
     create_response = await witness.post(
-        "/did/webvh/create",
+        "/did/webvh/operations/create",
         json={
             "options": {
                 "namespace": TEST_NAMESPACE,
@@ -84,7 +84,7 @@ async def test_update_operation():
     did_document["alsoKnownAs"] = ["https://example.com/updated"]
 
     await witness.post(
-        f"/did/webvh/update?scid={scid}",
+        f"/did/webvh/operations/update?scid={scid}",
         json={"did_document": did_document, "options": {}},
     )
 
@@ -114,7 +114,7 @@ async def test_deactivate_operation():
 
     identifier = str(uuid.uuid4())
     create_response = await witness.post(
-        "/did/webvh/create",
+        "/did/webvh/operations/create",
         json={
             "options": {
                 "namespace": TEST_NAMESPACE,
@@ -128,7 +128,7 @@ async def test_deactivate_operation():
     assert (scid := did.split(":")[2])
 
     deactivate_response = await witness.post(
-        f"/did/webvh/deactivate?scid={scid}", json={"options": {}}
+        f"/did/webvh/operations/deactivate?scid={scid}", json={"options": {}}
     )
 
     await asyncio.sleep(3)  # Allow time for the deactivation to propagate

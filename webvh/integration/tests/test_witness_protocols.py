@@ -41,7 +41,7 @@ async def test_self_witness_auto():
 
     identifier = str(uuid.uuid4())
     create_response = await witness.post(
-        "/did/webvh/create",
+        "/did/webvh/operations/create",
         json={
             "options": {
                 "namespace": TEST_NAMESPACE,
@@ -90,7 +90,7 @@ async def test_self_witness_manual():
 
     identifier = str(uuid.uuid4())
     create_response = await witness.post(
-        "/did/webvh/create",
+        "/did/webvh/operations/create",
         json={
             "options": {
                 "namespace": TEST_NAMESPACE,
@@ -169,7 +169,7 @@ async def test_remote_witness_auto():
     # Create the initial did
     identifier = str(uuid.uuid4())
     create_response = await controller.post(
-        "/did/webvh/create",
+        "/did/webvh/operations/create",
         json={
             "options": {
                 "namespace": TEST_NAMESPACE,
@@ -246,7 +246,7 @@ async def test_remote_witness_manual():
     # Create the initial did
     identifier = str(uuid.uuid4())
     create_response = await controller.post(
-        "/did/webvh/create",
+        "/did/webvh/operations/create",
         json={
             "options": {
                 "namespace": TEST_NAMESPACE,
