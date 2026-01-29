@@ -639,7 +639,7 @@ class DIDWebVHRegistry(BaseAnonCredsResolver, BaseAnonCredsRegistrar):
                         )
                         if record:
                             from ..protocols.states import WitnessingState
-                            record["state"] = WitnessingState.TIMEOUT.value
+                            record["state"] = WitnessingState.PENDING.value
                             async with profile.session() as session:
                                 await session.handle.insert(
                                     PendingAttestedResourceRecord().RECORD_TYPE,

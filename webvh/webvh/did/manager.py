@@ -149,19 +149,30 @@ class ControllerManager:
         return parameters
 
     async def _request_witness_signature(self, request_id, log_entry=None, scid=None):
+        # Save pending record first so controller can track it via GET /requests
+        # Do this before any other operations - use defaults if connection lookup fails
+        connection_id = ""
+        role = "controller"
+        if log_entry and scid:
+            try:
+                witness_connection = await self._get_active_witness_connection()
+                if witness_connection:
+                    connection_id = witness_connection.connection_id
+                else:
+                    role = "self-witness"
+                await self.pending_log_entries.save_pending_record(
+                    self.profile, scid, log_entry, request_id, connection_id, role=role
+                )
+            except Exception as e:
+                LOGGER.warning(
+                    "Failed to save pending record for controller: %s", str(e)
+                )
+
         if await is_witness(self.profile):
             return PENDING_MESSAGE
 
-        # Get witness connection for saving record
         witness_connection = await self._get_active_witness_connection()
         connection_id = witness_connection.connection_id if witness_connection else ""
-        
-        # Determine role: self-witnessing if no connection, otherwise controller
-        role = "self-witness" if not connection_id else "controller"
-
-        await self.pending_log_entries.save_pending_record(
-            self.profile, scid, log_entry, request_id, connection_id, role=role
-        )
 
         try:
             return await asyncio.wait_for(
@@ -175,7 +186,7 @@ class ControllerManager:
                     self.profile, request_id
                 )
                 if record:
-                    record["state"] = WitnessingState.TIMEOUT.value
+                    record["state"] = WitnessingState.PENDING.value
                     async with self.profile.session() as session:
                         await session.handle.insert(
                             self.pending_log_entries.RECORD_TYPE,

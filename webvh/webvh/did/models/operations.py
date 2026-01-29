@@ -8,6 +8,47 @@ from acapy_agent.vc.vc_ld.models.presentation import PresentationSchema
 from marshmallow import fields, validates, validate, ValidationError
 
 
+class RecordTypeEnum(enum.Enum):
+    """Record type for pending witness requests endpoint."""
+
+    LOG_ENTRY = "log-entry"
+    ATTESTED_RESOURCE = "attested-resource"
+    # TODO: add verifiable-credential
+
+
+class RecordTypeMatchInfoSchema(OpenAPISchema):
+    """Match info schema for record type path parameter."""
+
+    record_type = fields.Enum(
+        RecordTypeEnum,
+        required=True,
+        metadata={
+            "description": "Type of pending request",
+            "example": "log-entry",
+        },
+    )
+
+
+class RecordTypeRecordIdMatchInfoSchema(OpenAPISchema):
+    """Match info schema for record type and record id path parameters."""
+
+    record_type = fields.Enum(
+        RecordTypeEnum,
+        required=True,
+        metadata={
+            "description": "Type of pending request",
+            "example": "log-entry",
+        },
+    )
+    record_id = fields.Str(
+        required=True,
+        metadata={
+            "description": "ID of the pending request",
+            "example": "550e8400-e29b-41d4-a716-446655440000",
+        },
+    )
+
+
 class ConfigureWebvhSchema(OpenAPISchema):
     """Request model for configuring a Webvh agent."""
 
