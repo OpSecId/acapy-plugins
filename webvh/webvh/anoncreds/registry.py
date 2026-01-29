@@ -603,6 +603,32 @@ class DIDWebVHRegistry(BaseAnonCredsResolver, BaseAnonCredsRegistrar):
             # Request witness approval
             witness = WitnessManager(profile)
             controller = ControllerManager(profile)
+            pending_records = PendingAttestedResourceRecord()
+
+            # Check for existing pending request - prevents duplicate requests on retry
+            # (e.g. revocation list when witness doesn't auto-attest)
+            existing = await pending_records.get_pending_record_for_resource(
+                profile, secured_resource
+            )
+            if existing:
+                pending_record, request_id = existing
+                LOGGER.info(
+                    "Found existing pending request %s for resource, waiting (no new request)",
+                    request_id,
+                )
+                try:
+                    await asyncio.wait_for(
+                        controller._wait_for_resource(request_id),
+                        WITNESS_WAIT_TIMEOUT_SECONDS,
+                    )
+                    # Return the resource from the pending record (the one actually uploaded)
+                    return pending_record.get("record", secured_resource)
+                except asyncio.TimeoutError:
+                    raise AnonCredsRegistrationError(
+                        "Witness approval pending for this resource. "
+                        "Please wait for the witness to approve the existing request."
+                    )
+
             request_id = str(uuid.uuid4())
             endorsed_resource = await witness.witness_attested_resource(
                 scid, secured_resource, request_id
@@ -613,15 +639,12 @@ class DIDWebVHRegistry(BaseAnonCredsResolver, BaseAnonCredsRegistrar):
                     pass
 
                 # Get witness connection for saving record
-                # Access the private method through the controller instance
                 witness_connection = await controller._get_active_witness_connection()
                 connection_id = witness_connection.connection_id if witness_connection else ""
-                
-                # Determine role: self-witnessing if no connection, otherwise controller
                 role = "self-witness" if not connection_id else "controller"
 
                 # Save full pending record
-                await PendingAttestedResourceRecord().save_pending_record(
+                await pending_records.save_pending_record(
                     profile, scid, secured_resource, request_id, connection_id, role=role
                 )
 
@@ -634,15 +657,16 @@ class DIDWebVHRegistry(BaseAnonCredsResolver, BaseAnonCredsRegistrar):
                 except asyncio.TimeoutError:
                     # Update record state to timeout
                     try:
-                        record, _ = await PendingAttestedResourceRecord().get_pending_record(
+                        record, _ = await pending_records.get_pending_record(
                             profile, request_id
                         )
                         if record:
                             from ..protocols.states import WitnessingState
+
                             record["state"] = WitnessingState.PENDING.value
                             async with profile.session() as session:
                                 await session.handle.replace(
-                                    PendingAttestedResourceRecord().RECORD_TYPE,
+                                    pending_records.RECORD_TYPE,
                                     request_id,
                                     value_json=record,
                                     tags={"connection_id": connection_id},

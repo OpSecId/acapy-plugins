@@ -180,7 +180,7 @@ class ControllerManager:
                 WITNESS_WAIT_TIMEOUT_SECONDS,
             )
         except asyncio.TimeoutError:
-            # Update record state to timeout
+            # Update record state to pending
             try:
                 record, _ = await self.pending_log_entries.get_pending_record(
                     self.profile, request_id

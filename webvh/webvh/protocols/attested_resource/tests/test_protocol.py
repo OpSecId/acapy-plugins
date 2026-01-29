@@ -70,6 +70,53 @@ class TestAttestedResourceProtocol(IsolatedAsyncioTestCase):
             await record.get_pending_records(self.profile)
             await record.get_pending_record(self.profile, TEST_RECORD_ID)
 
+    async def test_get_pending_record_for_resource_by_id(self):
+        """Find pending record by resource id."""
+        await record.save_pending_record(
+            self.profile, TEST_SCID, TEST_RECORD, TEST_RECORD_ID, role="controller"
+        )
+        result = await record.get_pending_record_for_resource(
+            self.profile,
+            {"id": TEST_RESOURCE_ID, "content": {}, "metadata": {"resourceType": "schema"}},
+        )
+        self.assertIsNotNone(result)
+        pending, req_id = result
+        self.assertEqual(req_id, TEST_RECORD_ID)
+        await record.remove_pending_record(self.profile, TEST_RECORD_ID)
+
+    async def test_get_pending_record_for_resource_by_rev_reg_def_id(self):
+        """Find pending revocation list by rev_reg_def_id (prevents duplicate requests)."""
+        rev_reg_def_id = f"{TEST_DID}/anoncreds/rev-reg-def/123"
+        rev_list_record = {
+            "id": f"{TEST_DID}/resources/digest1",
+            "content": {"rev_reg_def_id": rev_reg_def_id, "timestamp": 1000},
+            "metadata": {"resourceType": "anonCredsStatusList"},
+        }
+        await record.save_pending_record(
+            self.profile, TEST_SCID, rev_list_record, TEST_RECORD_ID, role="controller"
+        )
+        # Retry with new timestamp -> different digest -> different resource id
+        retry_resource = {
+            "id": f"{TEST_DID}/resources/digest2",
+            "content": {"rev_reg_def_id": rev_reg_def_id, "timestamp": 2000},
+            "metadata": {"resourceType": "anonCredsStatusList"},
+        }
+        result = await record.get_pending_record_for_resource(
+            self.profile, retry_resource
+        )
+        self.assertIsNotNone(result)
+        pending, req_id = result
+        self.assertEqual(req_id, TEST_RECORD_ID)
+        await record.remove_pending_record(self.profile, TEST_RECORD_ID)
+
+    async def test_get_pending_record_for_resource_not_found(self):
+        """Returns None when no matching pending record."""
+        result = await record.get_pending_record_for_resource(
+            self.profile,
+            {"id": "unknown/resource", "content": {}, "metadata": {}},
+        )
+        self.assertIsNone(result)
+
     @mock.patch(
         "aiohttp.ClientSession.post",
         mock.AsyncMock(
