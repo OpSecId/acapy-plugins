@@ -96,14 +96,25 @@ class BasePendingRecord:
         record: dict,
         record_id: str,
         connection_id: str = "",
+        role: str = None,
     ) -> set:
-        """Save a pending record given a scid."""
+        """Save a pending record given a scid.
+        
+        Args:
+            profile: The profile to use
+            scid: The short circuit identifier
+            record: The record document to save
+            record_id: The unique record identifier
+            connection_id: The connection ID (empty for self-witnessing)
+            role: The role of the agent saving ("controller", "witness", or "self-witness")
+        """
         pending_record = {
             "record_id": record_id,
             "record_type": self.RECORD_TYPE,
             "record": record,
             "state": WitnessingState.PENDING.value,
             "scid": scid,
+            "role": role or "controller",  # Default to controller for backwards compatibility
         }
         async with profile.session() as session:
             await session.handle.insert(

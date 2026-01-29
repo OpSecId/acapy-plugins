@@ -58,8 +58,10 @@ class WitnessRequestHandler(BaseHandler):
             )
             # Save the document to the wallet for manual witness
             scid = log_entry.get("state").get("id").split(":")[2]
+            # Determine role: self-witnessing if no connection_id, otherwise witness
+            role = "self-witness" if not connection_id else "witness"
             await PENDING_RECORDS.save_pending_record(
-                context.profile, scid, log_entry, request_id, connection_id
+                context.profile, scid, log_entry, request_id, connection_id, role=role
             )
 
             await responder.send(
@@ -87,6 +89,24 @@ class WitnessResponseHandler(BaseHandler):
 
         log_entry = context.message.document
         controller = ControllerManager(context.profile)
+        request_id = context.message.request_id
+
+        # Update record state to completed/attested
+        try:
+            record, connection_id = await PENDING_RECORDS.get_pending_record(
+                context.profile, request_id
+            )
+            if record:
+                record["state"] = context.message.state
+                async with context.profile.session() as session:
+                    await session.handle.insert(
+                        PENDING_RECORDS.RECORD_TYPE,
+                        request_id,
+                        value_json=record,
+                        tags={"connection_id": connection_id or ""},
+                    )
+        except Exception as e:
+            LOGGER.warning(f"Could not update pending record state: {e}")
 
         witness_signature = {
             "versionId": log_entry.get("versionId"),
@@ -97,7 +117,13 @@ class WitnessResponseHandler(BaseHandler):
             log_entry=log_entry,
             witness_signature=witness_signature,
             state=context.message.state,
-            record_id=context.message.request_id,
+            record_id=request_id,
         )
+
+        # Remove from pending records after successful completion
+        try:
+            await PENDING_RECORDS.remove_pending_record_id(context.profile, request_id)
+        except Exception as e:
+            LOGGER.warning(f"Could not remove pending record: {e}")
 
         return {"status": "ok"}

@@ -148,17 +148,50 @@ class ControllerManager:
 
         return parameters
 
-    async def _request_witness_signature(self, request_id):
+    async def _request_witness_signature(self, request_id, log_entry=None, scid=None):
         if await is_witness(self.profile):
             return PENDING_MESSAGE
 
-        try:
+        # Get witness connection for saving record
+        witness_connection = await self._get_active_witness_connection()
+        connection_id = witness_connection.connection_id if witness_connection else ""
+        
+        # Determine role: self-witnessing if no connection, otherwise controller
+        role = "self-witness" if not connection_id else "controller"
+
+        # Save full pending record if log_entry and scid are provided
+        if log_entry and scid:
+            await self.pending_log_entries.save_pending_record(
+                self.profile, scid, log_entry, request_id, connection_id, role=role
+            )
+        else:
+            # Fallback to just tracking record_id for backwards compatibility
             await self.pending_log_entries.set_pending_record_id(self.profile, request_id)
+
+        try:
             return await asyncio.wait_for(
                 self._wait_for_log_entry(request_id),
                 WITNESS_WAIT_TIMEOUT_SECONDS,
             )
         except asyncio.TimeoutError:
+            # Update record state to timeout if we have the full record
+            if log_entry and scid:
+                try:
+                    record, _ = await self.pending_log_entries.get_pending_record(
+                        self.profile, request_id
+                    )
+                    if record:
+                        record["state"] = WitnessingState.TIMEOUT.value
+                        async with self.profile.session() as session:
+                            await session.handle.insert(
+                                self.pending_log_entries.RECORD_TYPE,
+                                request_id,
+                                value_json=record,
+                                tags={"connection_id": connection_id},
+                            )
+                except Exception:
+                    pass  # If record doesn't exist, that's okay
+
             return {
                 "status": "unknown",
                 "message": "No immediate response from witness agent.",
@@ -584,7 +617,9 @@ class ControllerManager:
             )
 
             if not isinstance(witness_signature, dict):
-                return await self._request_witness_signature(witness_request_id)
+                return await self._request_witness_signature(
+                    witness_request_id, log_entry=log_entry, scid=scid
+                )
 
         return await self.finish_did_operation(
             log_entry,

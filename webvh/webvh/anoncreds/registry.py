@@ -612,17 +612,43 @@ class DIDWebVHRegistry(BaseAnonCredsResolver, BaseAnonCredsRegistrar):
                 if await is_witness(profile):
                     pass
 
+                # Get witness connection for saving record
+                # Access the private method through the controller instance
+                witness_connection = await controller._get_active_witness_connection()
+                connection_id = witness_connection.connection_id if witness_connection else ""
+                
+                # Determine role: self-witnessing if no connection, otherwise controller
+                role = "self-witness" if not connection_id else "controller"
+
+                # Save full pending record
+                await PendingAttestedResourceRecord().save_pending_record(
+                    profile, scid, secured_resource, witness_request_id, connection_id, role=role
+                )
+
                 try:
                     LOGGER.info(witness_request_id)
-                    await PendingAttestedResourceRecord().set_pending_record_id(
-                        profile, witness_request_id
-                    )
                     await asyncio.wait_for(
                         controller._wait_for_resource(witness_request_id),
                         WITNESS_WAIT_TIMEOUT_SECONDS,
                     )
                 except asyncio.TimeoutError:
-                    pass
+                    # Update record state to timeout
+                    try:
+                        record, _ = await PendingAttestedResourceRecord().get_pending_record(
+                            profile, witness_request_id
+                        )
+                        if record:
+                            from ..protocols.states import WitnessingState
+                            record["state"] = WitnessingState.TIMEOUT.value
+                            async with profile.session() as session:
+                                await session.handle.insert(
+                                    PendingAttestedResourceRecord().RECORD_TYPE,
+                                    witness_request_id,
+                                    value_json=record,
+                                    tags={"connection_id": connection_id},
+                                )
+                    except Exception:
+                        pass  # If record doesn't exist, that's okay
             else:
                 # Upload resource to server
                 await server.upload_attested_resource(endorsed_resource)

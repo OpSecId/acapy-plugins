@@ -18,10 +18,15 @@ RECORD_TYPES = {
 @docs(tags=["did-webvh"], summary="Get all pending witness requests")
 @tenant_authentication
 async def get_pending_witness_requests(request: web.BaseRequest):
-    """Get all pending witness requests."""
+    """Get all pending witness requests (works for both controller and witness)."""
     context: AdminRequestContext = request["context"]
     record_type = request.match_info["record_type"]
     PENDING_RECORDS = RECORD_TYPES.get(record_type, None)
+    if not PENDING_RECORDS:
+        return web.json_response(
+            {"status": "error", "message": f"Unknown record type: {record_type}"},
+            status=400
+        )
     pending_witness_requests = await PENDING_RECORDS.get_pending_records(context.profile)
     return web.json_response({"results": pending_witness_requests})
 

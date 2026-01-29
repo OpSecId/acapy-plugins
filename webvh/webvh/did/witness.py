@@ -99,8 +99,9 @@ class WitnessManager:
             if config.get("auto_attest", False):
                 return await self.sign_log_version(log_entry.get("versionId"))
 
+            # Self-witnessing: no connection_id, role is self-witness
             await record.save_pending_record(
-                self.profile, scid, log_entry, witness_request_id
+                self.profile, scid, log_entry, witness_request_id, connection_id="", role="self-witness"
             )
 
         # Need proof from witness agent
@@ -137,11 +138,14 @@ class WitnessManager:
                     attested_resource,
                     f"did:key:{witness_key}#{witness_key}",
                 )
+            # Self-witnessing: no connection_id, role is self-witness
             await record.save_pending_record(
                 self.profile,
                 scid,
                 attested_resource,
                 witness_request_id,
+                connection_id="",
+                role="self-witness",
             )
 
         # Need proof from witness agent
