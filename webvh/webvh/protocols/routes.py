@@ -26,11 +26,7 @@ RECORD_TYPES = {
 async def get_pending_witness_requests(request: web.BaseRequest):
     """Get all pending witness requests (works for both controller and witness)."""
     context: AdminRequestContext = request["context"]
-    record_type = request.match_info["record_type"]
-    # record_type may be enum or string from path
-    record_type_str = (
-        record_type.value if hasattr(record_type, "value") else record_type
-    )
+    record_type_str = request.match_info["record_type"]
     PENDING_RECORDS = RECORD_TYPES.get(record_type_str, None)
     if not PENDING_RECORDS:
         return web.json_response(
@@ -51,10 +47,7 @@ async def approve_pending_witness_request(request: web.BaseRequest):
 
     try:
         record_id = request.match_info["record_id"]
-        record_type = request.match_info["record_type"]
-        record_type_str = (
-            record_type.value if hasattr(record_type, "value") else record_type
-        )
+        record_type_str = request.match_info["record_type"]
         PENDING_RECORDS = RECORD_TYPES.get(record_type_str, None)
         if not PENDING_RECORDS:
             return web.json_response(
@@ -94,10 +87,7 @@ async def reject_pending_witness_request(request: web.BaseRequest):
 
     try:
         record_id = request.match_info["record_id"]
-        record_type = request.match_info["record_type"]
-        record_type_str = (
-            record_type.value if hasattr(record_type, "value") else record_type
-        )
+        record_type_str = request.match_info["record_type"]
         PENDING_RECORDS = RECORD_TYPES.get(record_type_str, None)
         if not PENDING_RECORDS:
             return web.json_response(

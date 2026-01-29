@@ -16,15 +16,19 @@ class RecordTypeEnum(enum.Enum):
     # TODO: add verifiable-credential
 
 
+RECORD_TYPE_VALUES = [e.value for e in RecordTypeEnum]
+
+
 class RecordTypeMatchInfoSchema(OpenAPISchema):
     """Match info schema for record type path parameter."""
 
-    record_type = fields.Enum(
-        RecordTypeEnum,
+    record_type = fields.Str(
         required=True,
+        validate=validate.OneOf(RECORD_TYPE_VALUES),
         metadata={
-            "description": "Type of pending request",
+            "description": "Type of pending request (log-entry, attested-resource)",
             "example": "log-entry",
+            "enum": RECORD_TYPE_VALUES,
         },
     )
 
@@ -32,12 +36,13 @@ class RecordTypeMatchInfoSchema(OpenAPISchema):
 class RecordTypeRecordIdMatchInfoSchema(OpenAPISchema):
     """Match info schema for record type and record id path parameters."""
 
-    record_type = fields.Enum(
-        RecordTypeEnum,
+    record_type = fields.Str(
         required=True,
+        validate=validate.OneOf(RECORD_TYPE_VALUES),
         metadata={
-            "description": "Type of pending request",
+            "description": "Type of pending request (log-entry, attested-resource)",
             "example": "log-entry",
+            "enum": RECORD_TYPE_VALUES,
         },
     )
     record_id = fields.Str(
