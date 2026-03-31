@@ -529,7 +529,7 @@ class ControllerManager:
         # Set default namespace and random identifier if none provided
         domain = await get_server_domain(self.profile)
         namespace = options.get("namespace", "default")
-        identifier = options.get("identifier") or options.get("alias") or str(uuid4())
+        identifier = options.get("identifier", str(uuid4()))
 
         # Contact the server to request the identifier
         requested_identifier = await self.server_client.request_identifier(

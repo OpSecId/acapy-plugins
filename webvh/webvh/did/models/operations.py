@@ -207,13 +207,6 @@ class WebvhCreateSchema(OpenAPISchema):
                 "example": "1",
             },
         )
-        alias = fields.Str(
-            required=False,
-            metadata={
-                "description": "Alias for the DID path segment (synonym for identifier).",
-                "example": "my-alias",
-            },
-        )
         version_time = fields.Str(
             required=False,
             metadata={
